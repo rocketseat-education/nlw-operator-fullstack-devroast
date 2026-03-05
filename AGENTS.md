@@ -22,24 +22,9 @@
 
 ```
 src/
-  app/                  # Next.js App Router pages and layouts
-    globals.css         # Tailwind imports, @theme colors, base styles
-    layout.tsx          # Root layout (fonts, Navbar)
-    page.tsx            # Homepage
-    components/         # Component showcase page (/components)
-  components/
-    navbar.tsx           # Shared navbar (used in layout)
-    code-editor.tsx      # Interactive code editor (client component)
-    ui/                  # Reusable UI primitives
-      AGENTS.md          # Component-specific creation patterns
-      button.tsx
-      badge.tsx
-      toggle.tsx
-      diff-line.tsx
-      code-block.tsx     # Async server component (shiki)
-      analysis-card.tsx  # Composition: Root, Title, Description
-      leaderboard-row.tsx # Composition: Root, Rank, Score, Code, Language
-      score-ring.tsx     # SVG score ring
+  app/              # Next.js App Router pages and layouts
+  components/       # Feature-level components (navbar, code-editor, etc.)
+    ui/             # Reusable UI primitives (see ui/AGENTS.md for patterns)
 ```
 
 ## Key Decisions

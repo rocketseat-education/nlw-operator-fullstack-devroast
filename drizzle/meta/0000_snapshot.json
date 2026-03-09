@@ -1,0 +1,198 @@
+{
+  "id": "2fc31591-7d62-4cb5-9a08-1f14142255ef",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.analysis_items": {
+      "name": "analysis_items",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "roast_id": {
+          "name": "roast_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "severity": {
+          "name": "severity",
+          "type": "severity",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "varchar(200)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "order": {
+          "name": "order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "analysis_items_roast_id_roasts_id_fk": {
+          "name": "analysis_items_roast_id_roasts_id_fk",
+          "tableFrom": "analysis_items",
+          "tableTo": "roasts",
+          "columnsFrom": [
+            "roast_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.roasts": {
+      "name": "roasts",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "language": {
+          "name": "language",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "line_count": {
+          "name": "line_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "roast_mode": {
+          "name": "roast_mode",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "score": {
+          "name": "score",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "verdict": {
+          "name": "verdict",
+          "type": "verdict",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "roast_quote": {
+          "name": "roast_quote",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "suggested_fix": {
+          "name": "suggested_fix",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "roasts_score_idx": {
+          "name": "roasts_score_idx",
+          "columns": [
+            {
+              "expression": "score",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.severity": {
+      "name": "severity",
+      "schema": "public",
+      "values": [
+        "critical",
+        "warning",
+        "good"
+      ]
+    },
+    "public.verdict": {
+      "name": "verdict",
+      "schema": "public",
+      "values": [
+        "needs_serious_help",
+        "rough_around_edges",
+        "decent_code",
+        "solid_work",
+        "exceptional"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

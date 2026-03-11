@@ -11,10 +11,39 @@ import { DiffLine } from "@/components/ui/diff-line";
 import { ScoreRing } from "@/components/ui/score-ring";
 import { caller } from "@/trpc/server";
 
-export const metadata: Metadata = {
-  title: "Roast Result — DevRoast",
-  description: "See how your code scored on DevRoast — brutally honest.",
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const roast = await caller.roast.getById({ id });
+
+  const title = `${roast.score.toFixed(1)}/10 — ${roast.language} Roast — DevRoast`;
+  const description =
+    roast.roastQuote ?? "See how your code scored on DevRoast.";
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title: `${roast.score.toFixed(1)}/10 — ${roast.language} Roast`,
+      description,
+      images: [
+        {
+          url: `/roast/${id}/opengraph-image`,
+          width: 1200,
+          height: 630,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${roast.score.toFixed(1)}/10 — ${roast.language} Roast`,
+      description,
+    },
+  };
+}
 
 const verdictToBadgeVariant = {
   needs_serious_help: "critical",

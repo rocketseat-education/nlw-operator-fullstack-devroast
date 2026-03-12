@@ -156,18 +156,20 @@ function useLanguageDetection(code: string): UseLanguageDetectionReturn {
     }
 
     timerRef.current = setTimeout(() => {
-      getHljs().then((hljs) => {
-        const result = hljs.highlightAuto(code, DETECTION_SUBSET);
+      getHljs()
+        .then((hljs) => {
+          const result = hljs.highlightAuto(code, DETECTION_SUBSET);
 
-        if (result.language && result.relevance >= MIN_CONFIDENCE) {
-          const langKey = hljsIdToLanguageKey(result.language);
-          setDetectedLanguage(langKey);
-          setConfidence(result.relevance);
-        } else {
-          setDetectedLanguage(null);
-          setConfidence(result.relevance);
-        }
-      });
+          if (result.language && result.relevance >= MIN_CONFIDENCE) {
+            const langKey = hljsIdToLanguageKey(result.language);
+            setDetectedLanguage(langKey);
+            setConfidence(result.relevance);
+          } else {
+            setDetectedLanguage(null);
+            setConfidence(result.relevance);
+          }
+        })
+        .catch(() => {});
     }, DEBOUNCE_MS);
 
     return () => {

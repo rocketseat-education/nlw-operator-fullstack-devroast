@@ -140,9 +140,11 @@ function useShikiHighlighter(): UseShikiHighlighterReturn {
 
     // If language isn't loaded yet, trigger async load and force re-render when done
     if (!loadedLanguages.has(shikiId)) {
-      ensureLanguageLoaded(highlighter, shikiId).then(() => {
-        setLangVersion((v) => v + 1);
-      });
+      ensureLanguageLoaded(highlighter, shikiId)
+        .then(() => {
+          setLangVersion((v) => v + 1);
+        })
+        .catch(() => {});
       return escapeHtml(code);
     }
 

@@ -9,6 +9,28 @@ import { Toggle } from "@/components/ui/toggle";
 import { useLanguageDetection } from "@/hooks/use-language-detection";
 import { useTRPC } from "@/trpc/client";
 
+function getErrorMessage(error: { message: string }): string {
+  const message = error.message.toLowerCase();
+
+  if (message.includes("too_many_requests") || message.includes("rate")) {
+    return "// calma, cowboy! muitos roasts por minuto. respire fundo e tente novamente.";
+  }
+
+  if (
+    message.includes("quota") ||
+    message.includes("billing") ||
+    message.includes("insufficient")
+  ) {
+    return "// fizeram tanto roast de código que os créditos da IA acabaram. parabéns, devs.";
+  }
+
+  if (message.includes("timeout") || message.includes("aborted")) {
+    return "// a IA travou analisando seu código. deve ter sido tão ruim que ela desistiu.";
+  }
+
+  return "// ops, algo deu errado. até a IA tem dias ruins. tente novamente.";
+}
+
 function HomeEditor() {
   const [code, setCode] = useState("");
   const [roastMode, setRoastMode] = useState(true);
@@ -43,32 +65,40 @@ function HomeEditor() {
       />
 
       {/* Actions Bar */}
-      <div className="flex items-center justify-between w-full max-w-3xl">
-        <div className="flex items-center gap-4">
-          <Toggle
-            checked={roastMode}
-            onCheckedChange={setRoastMode}
-            label="roast mode"
-          />
-          <span className="font-mono text-xs text-text-tertiary">
-            {"// maximum sarcasm enabled"}
-          </span>
+      <div className="flex flex-col items-end gap-3 w-full max-w-3xl">
+        <div className="flex items-center justify-between w-full">
+          <div className="flex items-center gap-4">
+            <Toggle
+              checked={roastMode}
+              onCheckedChange={setRoastMode}
+              label="roast mode"
+            />
+            <span className="font-mono text-xs text-text-tertiary">
+              {"// maximum sarcasm enabled"}
+            </span>
+          </div>
+
+          <Button
+            variant="primary"
+            size="lg"
+            disabled={isDisabled}
+            onClick={() =>
+              createRoast.mutate({
+                code,
+                language: resolvedLanguage ?? "javascript",
+                roastMode,
+              })
+            }
+          >
+            {createRoast.isPending ? "$ roasting..." : "$ roast_my_code"}
+          </Button>
         </div>
 
-        <Button
-          variant="primary"
-          size="lg"
-          disabled={isDisabled}
-          onClick={() =>
-            createRoast.mutate({
-              code,
-              language: resolvedLanguage ?? "javascript",
-              roastMode,
-            })
-          }
-        >
-          {createRoast.isPending ? "$ roasting..." : "$ roast_my_code"}
-        </Button>
+        {createRoast.isError && (
+          <p className="font-mono text-xs text-accent-red">
+            {getErrorMessage(createRoast.error)}
+          </p>
+        )}
       </div>
     </div>
   );

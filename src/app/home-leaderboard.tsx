@@ -1,4 +1,4 @@
-import { cacheLife } from "next/cache";
+import { cacheLife, cacheTag } from "next/cache";
 import Link from "next/link";
 import type { BundledLanguage } from "shiki";
 import { CodeBlock } from "@/components/ui/code-block";
@@ -14,6 +14,7 @@ function scoreColor(score: number): string {
 async function HomeLeaderboard() {
   "use cache";
   cacheLife("hourly");
+  cacheTag("roast-data");
 
   const { entries, totalCount } = await caller.roast.getLeaderboard({});
 

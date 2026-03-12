@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { cacheLife } from "next/cache";
+import { cacheLife, cacheTag } from "next/cache";
 import type { BundledLanguage } from "shiki";
 import { CodeBlock } from "@/components/ui/code-block";
 import { caller } from "@/trpc/server";
@@ -20,6 +20,7 @@ function scoreColor(score: number): string {
 export default async function LeaderboardPage() {
   "use cache";
   cacheLife("hourly");
+  cacheTag("roast-data");
 
   const [{ totalRoasts, avgScore }, { entries }] = await Promise.all([
     caller.roast.getStats(),

@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { generateText, Output } from "ai";
 import { asc, avg, count, eq } from "drizzle-orm";
+import { revalidateTag } from "next/cache";
 import { headers } from "next/headers";
 import { z } from "zod";
 import { analysisItems, roasts } from "@/db/schema";
@@ -122,6 +123,8 @@ export const roastRouter = createTRPCRouter({
           })),
         );
       }
+
+      revalidateTag("roast-data", "hourly");
 
       return { id: roast.id };
     }),

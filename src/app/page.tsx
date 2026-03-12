@@ -1,4 +1,4 @@
-import { cacheLife } from "next/cache";
+import { cacheLife, cacheTag } from "next/cache";
 import Link from "next/link";
 import { Suspense } from "react";
 import { HydrateClient, prefetch, trpc } from "@/trpc/server";
@@ -10,6 +10,7 @@ import { HomeStats } from "./home-stats";
 export default async function HomePage() {
   "use cache";
   cacheLife("hourly");
+  cacheTag("roast-data");
 
   prefetch(trpc.roast.getStats.queryOptions());
 

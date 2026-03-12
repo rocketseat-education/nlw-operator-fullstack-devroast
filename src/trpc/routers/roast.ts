@@ -1,9 +1,11 @@
 import { TRPCError } from "@trpc/server";
 import { generateText, Output } from "ai";
 import { asc, avg, count, eq } from "drizzle-orm";
+import { headers } from "next/headers";
 import { z } from "zod";
 import { analysisItems, roasts } from "@/db/schema";
 import { getSystemPrompt, model, roastOutputSchema } from "@/lib/ai";
+import { rateLimiter } from "@/lib/rate-limit";
 import { baseProcedure, createTRPCRouter } from "../init";
 
 export const roastRouter = createTRPCRouter({
@@ -57,6 +59,24 @@ export const roastRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      if (rateLimiter) {
+        const headersList = await headers();
+        const ip =
+          headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+          headersList.get("x-real-ip") ??
+          "unknown";
+
+        const { success } = await rateLimiter.limit(ip);
+
+        if (!success) {
+          throw new TRPCError({
+            code: "TOO_MANY_REQUESTS",
+            message:
+              "Calma aí, cowboy! Você já fritou código demais. Volte em 1 minuto.",
+          });
+        }
+      }
+
       const { output } = await generateText({
         model,
         output: Output.object({ schema: roastOutputSchema }),

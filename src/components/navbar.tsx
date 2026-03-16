@@ -19,6 +19,12 @@ function Navbar() {
         >
           leaderboard
         </Link>
+        <Link
+          href="/privacidade"
+          className="font-mono text-[13px] text-text-tertiary hover:text-text-primary transition-colors"
+        >
+          privacidade
+        </Link>
       </div>
     </nav>
   );

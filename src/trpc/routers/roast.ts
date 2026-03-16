@@ -7,7 +7,6 @@ import { TRPCError } from "@trpc/server";
 import { generateText, Output } from "ai";
 import { asc, avg, count, eq } from "drizzle-orm";
 import { revalidateTag } from "next/cache";
-import { headers } from "next/headers";
 import { z } from "zod";
 import { analysisItems, roasts } from "@/db/schema";
 import {
@@ -18,8 +17,7 @@ import {
   roastOutputSchema,
 } from "@/lib/ai";
 import { LANGUAGES } from "@/lib/languages";
-import { rateLimiter } from "@/lib/rate-limit";
-import { baseProcedure, createTRPCRouter } from "../init";
+import { baseProcedure, createTRPCRouter, rateLimitedProcedure } from "../init";
 
 export const roastRouter = createTRPCRouter({
   getStats: baseProcedure.query(async ({ ctx }) => {
@@ -63,7 +61,7 @@ export const roastRouter = createTRPCRouter({
       };
     }),
 
-  create: baseProcedure
+  create: rateLimitedProcedure
     .input(
       z.object({
         code: z.string().min(1).max(2000),
@@ -83,24 +81,6 @@ export const roastRouter = createTRPCRouter({
               codeLength: input.code.length,
             },
           });
-
-          if (rateLimiter) {
-            const headersList = await headers();
-            const ip =
-              headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-              headersList.get("x-real-ip") ??
-              "unknown";
-
-            const { success } = await rateLimiter.limit(ip);
-
-            if (!success) {
-              throw new TRPCError({
-                code: "TOO_MANY_REQUESTS",
-                message:
-                  "Calma aí, cowboy! Você já fritou código demais. Volte em 1 minuto.",
-              });
-            }
-          }
 
           const { output: moderation } = await propagateAttributes(
             {

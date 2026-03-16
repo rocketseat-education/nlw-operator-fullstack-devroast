@@ -10,8 +10,12 @@ import { useLanguageDetection } from "@/hooks/use-language-detection";
 import { posthog } from "@/lib/posthog";
 import { useTRPC } from "@/trpc/client";
 
-function getErrorMessage(error: { message: string }): string {
+function getErrorMessage(error: {
+  message: string;
+  data?: { code?: string } | null;
+}): string {
   const message = error.message.toLowerCase();
+  const code = error.data?.code;
 
   if (message.includes("not_code")) {
     return "// isso nem é código, amigo. aqui a gente roasta código, tenta colar algo que compile.";
@@ -21,7 +25,7 @@ function getErrorMessage(error: { message: string }): string {
     return "// conteúdo impróprio detectado. aqui a gente roasta código, não a moral da sociedade.";
   }
 
-  if (message.includes("too_many_requests") || message.includes("rate")) {
+  if (code === "TOO_MANY_REQUESTS" || message.includes("rate")) {
     return "// calma, cowboy! muitos roasts por minuto. respire fundo e tente novamente.";
   }
 

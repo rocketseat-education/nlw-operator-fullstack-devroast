@@ -13,7 +13,7 @@ function createRateLimiter() {
 
   return new Ratelimit({
     redis,
-    limiter: Ratelimit.slidingWindow(1, "60 s"),
+    limiter: Ratelimit.slidingWindow(5, "60 s"),
     analytics: true,
     prefix: "devroast:ratelimit",
   });

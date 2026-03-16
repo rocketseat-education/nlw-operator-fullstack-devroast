@@ -1,3 +1,8 @@
+import {
+  observe,
+  propagateAttributes,
+  setActiveTraceIO,
+} from "@langfuse/tracing";
 import { TRPCError } from "@trpc/server";
 import { generateText, Output } from "ai";
 import { asc, avg, count, eq } from "drizzle-orm";
@@ -68,94 +73,133 @@ export const roastRouter = createTRPCRouter({
         roastMode: z.boolean(),
       }),
     )
-    .mutation(async ({ ctx, input }) => {
-      if (rateLimiter) {
-        const headersList = await headers();
-        const ip =
-          headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-          headersList.get("x-real-ip") ??
-          "unknown";
-
-        const { success } = await rateLimiter.limit(ip);
-
-        if (!success) {
-          throw new TRPCError({
-            code: "TOO_MANY_REQUESTS",
-            message:
-              "Calma aí, cowboy! Você já fritou código demais. Volte em 1 minuto.",
+    .mutation(
+      observe(
+        async ({ ctx, input }) => {
+          setActiveTraceIO({
+            input: {
+              language: input.language,
+              roastMode: input.roastMode,
+              codeLength: input.code.length,
+            },
           });
-        }
-      }
 
-      const { output: moderation } = await generateText({
-        model,
-        maxOutputTokens: 50,
-        output: Output.object({ schema: moderationOutputSchema }),
-        system: MODERATION_PROMPT,
-        prompt: input.code,
-      });
+          if (rateLimiter) {
+            const headersList = await headers();
+            const ip =
+              headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+              headersList.get("x-real-ip") ??
+              "unknown";
 
-      if (moderation?.status === "not_code") {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "not_code",
-        });
-      }
+            const { success } = await rateLimiter.limit(ip);
 
-      if (moderation?.status === "nsfw") {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "nsfw",
-        });
-      }
+            if (!success) {
+              throw new TRPCError({
+                code: "TOO_MANY_REQUESTS",
+                message:
+                  "Calma aí, cowboy! Você já fritou código demais. Volte em 1 minuto.",
+              });
+            }
+          }
 
-      const { output } = await generateText({
-        model,
-        maxOutputTokens: 2000,
-        output: Output.object({ schema: roastOutputSchema }),
-        system: getSystemPrompt(input.roastMode),
-        prompt: `Language: ${input.language}\n\nCode:\n${input.code}`,
-      });
+          const { output: moderation } = await propagateAttributes(
+            {
+              metadata: { step: "moderation" },
+            },
+            () =>
+              generateText({
+                model,
+                maxOutputTokens: 50,
+                output: Output.object({ schema: moderationOutputSchema }),
+                system: MODERATION_PROMPT,
+                prompt: input.code,
+                experimental_telemetry: { isEnabled: true },
+              }),
+          );
 
-      if (!output) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "AI failed to generate a valid response",
-        });
-      }
+          if (moderation?.status === "not_code") {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "not_code",
+            });
+          }
 
-      const lineCount = input.code.split("\n").length;
+          if (moderation?.status === "nsfw") {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "nsfw",
+            });
+          }
 
-      const [roast] = await ctx.db
-        .insert(roasts)
-        .values({
-          code: input.code,
-          language: input.language,
-          lineCount,
-          roastMode: input.roastMode,
-          score: output.score,
-          verdict: output.verdict,
-          roastQuote: output.roastQuote,
-          suggestedFix: output.suggestedFix,
-        })
-        .returning({ id: roasts.id });
+          const { output } = await propagateAttributes(
+            {
+              metadata: {
+                step: "review",
+                language: input.language,
+                roastMode: String(input.roastMode),
+              },
+            },
+            () =>
+              generateText({
+                model,
+                maxOutputTokens: 2000,
+                output: Output.object({ schema: roastOutputSchema }),
+                system: getSystemPrompt(input.roastMode),
+                prompt: `Language: ${input.language}\n\nCode:\n${input.code}`,
+                experimental_telemetry: { isEnabled: true },
+              }),
+          );
 
-      if (output.analysisItems.length > 0) {
-        await ctx.db.insert(analysisItems).values(
-          output.analysisItems.map((item, index) => ({
-            roastId: roast.id,
-            severity: item.severity,
-            title: item.title,
-            description: item.description,
-            order: index,
-          })),
-        );
-      }
+          if (!output) {
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: "AI failed to generate a valid response",
+            });
+          }
 
-      revalidateTag("roast-data", "hourly");
+          const lineCount = input.code.split("\n").length;
 
-      return { id: roast.id };
-    }),
+          const [roast] = await ctx.db
+            .insert(roasts)
+            .values({
+              code: input.code,
+              language: input.language,
+              lineCount,
+              roastMode: input.roastMode,
+              score: output.score,
+              verdict: output.verdict,
+              roastQuote: output.roastQuote,
+              suggestedFix: output.suggestedFix,
+            })
+            .returning({ id: roasts.id });
+
+          if (output.analysisItems.length > 0) {
+            await ctx.db.insert(analysisItems).values(
+              output.analysisItems.map((item, index) => ({
+                roastId: roast.id,
+                severity: item.severity,
+                title: item.title,
+                description: item.description,
+                order: index,
+              })),
+            );
+          }
+
+          revalidateTag("roast-data", "hourly");
+
+          setActiveTraceIO({
+            output: {
+              roastId: roast.id,
+              score: output.score,
+              verdict: output.verdict,
+            },
+          });
+
+          return { id: roast.id };
+        },
+        { name: "roast.create" },
+      ),
+    ),
 
   getById: baseProcedure
     .input(z.object({ id: z.string().uuid() }))

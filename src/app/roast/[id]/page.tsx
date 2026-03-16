@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { cache } from "react";
 import type { BundledLanguage } from "shiki";
+import { TrackRoastView } from "@/components/track-roast-view";
 import {
   AnalysisCardDescription,
   AnalysisCardRoot,
@@ -102,6 +103,11 @@ export default async function RoastResultPage({
 
   return (
     <main className="flex flex-col w-full">
+      <TrackRoastView
+        score={roast.score}
+        verdict={roast.verdict}
+        language={roast.language}
+      />
       <div className="flex flex-col gap-10 w-full max-w-6xl mx-auto px-10 md:px-20 py-10">
         {/* Score Hero */}
         <section className="flex items-center gap-12">

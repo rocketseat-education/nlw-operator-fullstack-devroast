@@ -7,6 +7,7 @@ import { CodeEditor, MAX_CHARACTERS } from "@/components/code-editor";
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
 import { useLanguageDetection } from "@/hooks/use-language-detection";
+import { posthog } from "@/lib/posthog";
 import { useTRPC } from "@/trpc/client";
 
 function getErrorMessage(error: { message: string }): string {
@@ -52,7 +53,20 @@ function HomeEditor() {
   const createRoast = useMutation(
     trpc.roast.create.mutationOptions({
       onSuccess(data) {
+        posthog.capture("code_submitted", {
+          language: resolvedLanguage,
+          roast_mode: roastMode,
+          code_length: code.length,
+          line_count: code.split("\n").length,
+        });
         router.push(`/roast/${data.id}`);
+      },
+      onError(error) {
+        posthog.capture("roast_error", {
+          error_type: error.message,
+          language: resolvedLanguage,
+          roast_mode: roastMode,
+        });
       },
     }),
   );

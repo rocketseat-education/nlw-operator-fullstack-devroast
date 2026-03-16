@@ -1,11 +1,18 @@
 "use client";
 
+import * as Sentry from "@sentry/nextjs";
+import { useEffect } from "react";
+
 function GlobalError({
+  error,
   reset,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  useEffect(() => {
+    Sentry.captureException(error);
+  }, [error]);
   return (
     <main className="flex flex-col items-center justify-center min-h-[60vh] gap-6 px-10">
       <span className="font-mono text-6xl text-accent-red">{"x"}</span>

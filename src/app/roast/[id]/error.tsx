@@ -1,6 +1,8 @@
 "use client";
 
+import * as Sentry from "@sentry/nextjs";
 import Link from "next/link";
+import { useEffect } from "react";
 
 function RoastError({
   error,
@@ -9,6 +11,10 @@ function RoastError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  useEffect(() => {
+    Sentry.captureException(error);
+  }, [error]);
+
   const isNotFound =
     error.message.includes("NOT_FOUND") || error.message.includes("not found");
 

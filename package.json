@@ -20,6 +20,7 @@
     "@langfuse/otel": "^5.0.1",
     "@langfuse/tracing": "^5.0.1",
     "@neondatabase/serverless": "^1.0.2",
+    "@next/third-parties": "^16.2.0",
     "@number-flow/react": "0.6.0",
     "@opentelemetry/sdk-trace-node": "^2.6.0",
     "@sentry/nextjs": "^10.43.0",

@@ -5,7 +5,8 @@ if (!process.env.OPENAI_API_KEY) {
   throw new Error("OPENAI_API_KEY is not set");
 }
 
-export const model = openai("gpt-4o-mini");
+export const moderationModel = openai("gpt-4o-mini");
+export const roastModel = openai("gpt-4o-mini");
 
 export const roastOutputSchema = z.object({
   score: z.number().min(0).max(10),

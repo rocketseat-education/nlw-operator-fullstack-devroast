@@ -12,8 +12,9 @@ import { analysisItems, roasts } from "@/db/schema";
 import {
   getSystemPrompt,
   MODERATION_PROMPT,
-  model,
+  moderationModel,
   moderationOutputSchema,
+  roastModel,
   roastOutputSchema,
 } from "@/lib/ai";
 import { LANGUAGES } from "@/lib/languages";
@@ -88,7 +89,7 @@ export const roastRouter = createTRPCRouter({
             },
             () =>
               generateText({
-                model,
+                model: moderationModel,
                 maxOutputTokens: 50,
                 output: Output.object({ schema: moderationOutputSchema }),
                 system: MODERATION_PROMPT,
@@ -121,7 +122,7 @@ export const roastRouter = createTRPCRouter({
             },
             () =>
               generateText({
-                model,
+                model: roastModel,
                 maxOutputTokens: 2000,
                 output: Output.object({ schema: roastOutputSchema }),
                 system: getSystemPrompt(input.roastMode),

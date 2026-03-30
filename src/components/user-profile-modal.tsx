@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -87,10 +88,10 @@ export function UserProfileModal({
       <div className="bg-bg-elevated rounded-lg max-w-md w-full shadow-lg">
         <div className="p-6">
           <h2 className="text-xl font-bold text-text-primary mb-2">
-            Vamos conhecê-lo melhor!
+            Calma, é de graça sim!
           </h2>
           <p className="text-sm text-text-secondary mb-6">
-            Para continuar usando o DevRoast, compartilhe seus dados conosco.
+            Mas antes de qualquer coisa:
           </p>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -188,6 +189,28 @@ export function UserProfileModal({
                   : "Erro ao enviar dados"}
               </div>
             )}
+
+            {/* Disclaimer de termos e privacidade */}
+            <p className="text-xs text-text-secondary leading-relaxed text-center">
+              Ao continuar, você concorda com nossos{" "}
+              <Link
+                href="/terms"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-accent-green hover:underline"
+              >
+                Termos de Uso
+              </Link>
+              {" "}e{" "}
+              <Link
+                href="/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-accent-green hover:underline"
+              >
+                Política de Privacidade
+              </Link>
+            </p>
 
             {/* Botões */}
             <div className="flex gap-3 pt-4">

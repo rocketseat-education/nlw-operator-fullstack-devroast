@@ -27,7 +27,6 @@ export async function syncContactToHubSpot(
   }
 
   // Remove símbolos do telefone, mantendo apenas números
-  const cleanPhone = data.phone.replace(/\D/g, "");
 
   const hubspotPayload = {
     fields: [
@@ -45,7 +44,7 @@ export async function syncContactToHubSpot(
       },
       {
         name: "phone",
-        value: cleanPhone,
+        value: data.phone,
       },
       {
         name: "nivel_de_conhecimento_em_programacao",

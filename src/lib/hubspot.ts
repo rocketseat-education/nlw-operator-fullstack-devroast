@@ -53,7 +53,7 @@ export async function syncContactToHubSpot(
       },
     ],
     context: {
-      pageUri: "https://devroast.app",
+      pageUri: "https://devroast.rocketseat.dev",
       pageName: "DevRoast - User Profile Form",
     },
   };

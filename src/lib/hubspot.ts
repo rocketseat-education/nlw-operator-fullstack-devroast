@@ -48,7 +48,7 @@ export async function syncContactToHubSpot(
         value: cleanPhone,
       },
       {
-        name: "nivel_de_programacao",
+        name: "nivel_de_conhecimento_em_programacao",
         value: data.programmingLevel,
       },
     ],

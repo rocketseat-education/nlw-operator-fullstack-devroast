@@ -20,7 +20,6 @@ function getOrCreateSessionId(): string {
 
   if (sessionCookie) {
     const id = sessionCookie.split("=")[1];
-    console.log("✅ Existing sessionId from cookie:", id);
     return id;
   }
 
@@ -32,7 +31,6 @@ function getOrCreateSessionId(): string {
   const expires = new Date(Date.now() + expiresIn).toUTCString();
   document.cookie = `${SESSION_ID_COOKIE_NAME}=${newSessionId}; expires=${expires}; path=/`;
 
-  console.log("🆕 New sessionId created:", newSessionId);
   return newSessionId;
 }
 
@@ -57,42 +55,33 @@ export function useUserTracking() {
 
   const trackRoastRequest = async () => {
     if (!sessionId) {
-      console.warn("❌ No sessionId available for tracking");
-      return;
+      return { shouldShowForm: false, requestCount: 0 };
     }
 
     try {
-      console.log("📊 Tracking request for sessionId:", sessionId);
       const result = await trackRequest.mutateAsync({ sessionId });
-      console.log("📈 Track result:", {
-        requestCount: result.requestCount,
-        shouldShowForm: result.shouldShowForm,
-      });
 
       setRequestCount(result.requestCount);
       setShouldShowModal(result.shouldShowForm);
 
       if (result.shouldShowForm) {
-        console.log("🎯 OPENING MODAL! (3rd request reached)");
         setIsModalOpen(true);
-      } else {
-        console.log(`📍 Request count: ${result.requestCount}/3`);
       }
+
+      return result;
     } catch (error) {
       console.error("❌ Error tracking request:", error);
+      return { shouldShowForm: false, requestCount: 0 };
     }
   };
 
   const handleCancelModal = async () => {
     if (!sessionId) {
-      console.warn("❌ No sessionId available for decrementing");
       return;
     }
 
     try {
-      console.log("↩️ Canceling modal, decrementing request count");
       const result = await decrementRequest.mutateAsync({ sessionId });
-      console.log("📉 Decrement result:", result);
       setRequestCount(result.requestCount);
       setIsModalOpen(false);
     } catch (error) {

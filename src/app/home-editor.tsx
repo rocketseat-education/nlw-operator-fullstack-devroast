@@ -1,8 +1,8 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import { CodeEditor, MAX_CHARACTERS } from "@/components/code-editor";
 import { UserProfileModal } from "@/components/user-profile-modal";
 import { Button } from "@/components/ui/button";
@@ -24,26 +24,57 @@ function HomeEditor() {
     handleCancelModal,
   } = useUserTracking();
   const [lastRoastId, setLastRoastId] = useState<string | null>(null);
+  const [skipModalFlag, setSkipModalFlag] = useState(false);
+  const prevModalStateRef = useRef<boolean>(false);
 
   const resolvedLanguage = manualLanguage ?? detectedLanguage;
 
   const router = useRouter();
+  const pathname = usePathname();
   const trpc = useTRPC();
   const createRoast = useMutation(
     trpc.roast.create.mutationOptions({
       onSuccess: async (data) => {
-        await trackRoastRequest();
+        const trackResult = await trackRoastRequest();
         setLastRoastId(data.id);
+        
+        // Se email já existe (shouldShowForm = false), redireciona direto
+        if (trackResult && !trackResult.shouldShowForm) {
+          setSkipModalFlag(true);
+        }
       },
     }),
   );
 
-  // Redireciona para a página do roast após modal ser fechado
+  // Effect para redirecionar apenas quando modal fecha após submissão
   useEffect(() => {
-    if (lastRoastId && !isModalOpen) {
+    if (!lastRoastId) return;
+
+    const modalJustClosed = prevModalStateRef.current && !isModalOpen;
+    
+    if (modalJustClosed) {
       router.push(`/roast/${lastRoastId}`);
     }
+    
+    prevModalStateRef.current = isModalOpen;
   }, [lastRoastId, isModalOpen, router]);
+
+  // Reseta lastRoastId quando volta para home (previne auto-redirect)
+  useEffect(() => {
+    if (pathname === "/") {
+      setLastRoastId(null);
+      setSkipModalFlag(false);
+      prevModalStateRef.current = false;
+    }
+  }, [pathname]);
+
+  // Redireciona imediatamente se email já foi enviado (skipModalFlag = true)
+  useEffect(() => {
+    if (lastRoastId && skipModalFlag) {
+      router.push(`/roast/${lastRoastId}`);
+      setSkipModalFlag(false);
+    }
+  }, [lastRoastId, skipModalFlag, router]);
 
   // Cancela modal e reseta roast ID (decrementa contador)
   const handleCancel = async () => {

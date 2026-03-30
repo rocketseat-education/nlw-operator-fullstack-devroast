@@ -26,8 +26,6 @@ export async function syncContactToHubSpot(
     throw new Error("HUBSPOT_PORTAL_ID or HUBSPOT_FORM_ID is not set");
   }
 
-  // Remove símbolos do telefone, mantendo apenas números
-
   const hubspotPayload = {
     fields: [
       {

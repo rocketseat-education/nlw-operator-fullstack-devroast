@@ -1,47 +1,53 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTRPC } from "@/trpc/client";
 
-const SESSION_ID_STORAGE_KEY = "devroast_session_id_storage";
+// Generate a session ID at module load time - runs ONCE per page load
+// This is a pure memory-based session, no localStorage dependency
+let SESSION_ID: string = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-// Initialize sessionId OUTSIDE component - runs on import, guaranteed before render
-let cachedSessionId: string | null = null;
-
-function initializeSessionId(): string {
-  if (!cachedSessionId) {
-    if (typeof window !== "undefined") {
-      try {
-        cachedSessionId = localStorage.getItem(SESSION_ID_STORAGE_KEY);
-        if (!cachedSessionId) {
-          cachedSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-          localStorage.setItem(SESSION_ID_STORAGE_KEY, cachedSessionId);
-        }
-      } catch (e) {
-        // Fallback if localStorage fails
-        cachedSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      }
-    }
-  }
-  return cachedSessionId || "";
-}
+const REQUEST_COUNT_STORAGE_KEY = "devroast_request_count";
 
 export function useUserTracking() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [requestCount, setRequestCount] = useState(0);
+  const [isHydrated, setIsHydrated] = useState(false);
 
   const trpc = useTRPC();
   const trackRequest = useMutation(trpc.roast.trackRequest.mutationOptions());
   const decrementRequest = useMutation(trpc.roast.decrementRequestCount.mutationOptions());
 
+  // Load persistent requestCount from localStorage AFTER hydration
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(REQUEST_COUNT_STORAGE_KEY);
+      if (stored) {
+        setRequestCount(parseInt(stored, 10));
+      }
+    } catch (e) {
+      // ignore
+    }
+    setIsHydrated(true);
+  }, []);
+
+  // Save requestCount to localStorage whenever it changes
+  useEffect(() => {
+    if (!isHydrated) return;
+    try {
+      localStorage.setItem(REQUEST_COUNT_STORAGE_KEY, String(requestCount));
+    } catch (e) {
+      // ignore
+    }
+  }, [requestCount, isHydrated]);
+
   const trackRoastRequest = async () => {
-    const sessionId = initializeSessionId();
-    
-    if (!sessionId) return { shouldShowForm: false, requestCount: 0 };
+    // SESSION_ID is ALWAYS initialized at module load, never null/empty
+    if (!SESSION_ID) return { shouldShowForm: false, requestCount: 0 };
 
     try {
-      const result = await trackRequest.mutateAsync({ sessionId });
+      const result = await trackRequest.mutateAsync({ sessionId: SESSION_ID });
       setRequestCount(result.requestCount);
 
       if (result.shouldShowForm) {
@@ -56,11 +62,10 @@ export function useUserTracking() {
   };
 
   const handleCancelModal = async () => {
-    const sessionId = initializeSessionId();
-    if (!sessionId) return;
+    if (!SESSION_ID) return;
 
     try {
-      const result = await decrementRequest.mutateAsync({ sessionId });
+      const result = await decrementRequest.mutateAsync({ sessionId: SESSION_ID });
       setRequestCount(result.requestCount);
       setIsModalOpen(false);
     } catch (error) {
@@ -70,9 +75,7 @@ export function useUserTracking() {
   };
 
   return {
-    // IMPORTANT: sessionId should ONLY be used for logic/API calls, NOT rendered in JSX
-    // This avoids hydration mismatches where server renders empty string but client renders a value
-    sessionId: initializeSessionId(),
+    sessionId: SESSION_ID,
     requestCount,
     isModalOpen,
     setIsModalOpen,

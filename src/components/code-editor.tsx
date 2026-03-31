@@ -171,7 +171,7 @@ function CodeEditor({
             isOverLimit ? "text-accent-red" : "text-text-tertiary",
           )}
         >
-          {charCount.toLocaleString()}/{MAX_CHARACTERS.toLocaleString()}
+          {charCount.toLocaleString("en-US")}/{MAX_CHARACTERS.toLocaleString("en-US")}
         </span>
       </div>
     </div>

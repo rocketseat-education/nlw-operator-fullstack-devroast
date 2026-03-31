@@ -48,3 +48,27 @@ export const analysisItems = pgTable("analysis_items", {
   description: text().notNull(),
   order: integer().notNull(),
 });
+
+export const programmingLevelEnum = pgEnum("programming_level", [
+  "Iniciante",
+  "Atuo na área há menos de 2 anos",
+  "Atuo na área há mais de 2 anos",
+]);
+
+export const userProfiles = pgTable(
+  "user_profiles",
+  {
+    id: uuid().defaultRandom().primaryKey(),
+    sessionId: varchar({ length: 255 }).unique().notNull(),
+    email: varchar({ length: 255 }),
+    firstName: varchar({ length: 255 }),
+    lastName: varchar({ length: 255 }),
+    phone: varchar({ length: 20 }),
+    programmingLevel: programmingLevelEnum(),
+    requestCount: integer().default(1).notNull(),
+    hubspotContactId: varchar({ length: 255 }),
+    createdAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index("user_profiles_session_idx").on(table.sessionId)],
+);

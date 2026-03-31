@@ -19,6 +19,18 @@ function Navbar() {
         >
           leaderboard
         </Link>
+        <Link
+          href="/terms"
+          className="font-mono text-[13px] text-text-secondary hover:text-text-primary transition-colors"
+        >
+          termos
+        </Link>
+        <Link
+          href="/privacy"
+          className="font-mono text-[13px] text-text-secondary hover:text-text-primary transition-colors"
+        >
+          privacidade
+        </Link>
       </div>
     </nav>
   );

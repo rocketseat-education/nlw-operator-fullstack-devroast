@@ -1,9 +1,10 @@
 import { TRPCError } from "@trpc/server";
 import { generateText, Output } from "ai";
-import { asc, avg, count, eq } from "drizzle-orm";
+import { asc, avg, count, eq, desc } from "drizzle-orm";
 import { z } from "zod";
-import { analysisItems, roasts } from "@/db/schema";
+import { analysisItems, roasts, userProfiles } from "@/db/schema";
 import { getSystemPrompt, model, roastOutputSchema } from "@/lib/ai";
+import { syncContactToHubSpot } from "@/lib/hubspot";
 import { baseProcedure, createTRPCRouter } from "../init";
 
 export const roastRouter = createTRPCRouter({
@@ -126,6 +127,167 @@ export const roastRouter = createTRPCRouter({
       return {
         ...roast,
         analysisItems: items,
+      };
+    }),
+
+  trackRequest: baseProcedure
+    .input(z.object({ sessionId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      console.log("[trackRequest] Received sessionId:", input.sessionId);
+
+      try {
+        const [existing] = await ctx.db
+          .select()
+          .from(userProfiles)
+          .where(eq(userProfiles.sessionId, input.sessionId))
+          .limit(1);
+
+        console.log("[trackRequest] Existing profile:", existing);
+
+        if (existing) {
+          // Se o email já está preenchido, significa que o formulário foi submetido
+          const isFormSubmitted = !!existing.email;
+          if (isFormSubmitted) {
+            console.log("[trackRequest] Form already submitted (email exists), not showing modal");
+            return {
+              requestCount: existing.requestCount,
+              shouldShowForm: false,
+            };
+          }
+
+          const newCount = existing.requestCount + 1;
+          console.log("[trackRequest] Incrementing count from", existing.requestCount, "to", newCount);
+
+          await ctx.db
+            .update(userProfiles)
+            .set({ requestCount: newCount, updatedAt: new Date() })
+            .where(eq(userProfiles.sessionId, input.sessionId));
+
+          const shouldShow = newCount === 3;
+          console.log("[trackRequest] Returning: requestCount =", newCount, ", shouldShowForm =", shouldShow);
+
+          return {
+            requestCount: newCount,
+            shouldShowForm: shouldShow,
+          };
+        }
+
+        console.log("[trackRequest] Creating new profile for sessionId:", input.sessionId);
+
+        await ctx.db.insert(userProfiles).values({
+          sessionId: input.sessionId,
+          requestCount: 1,
+        });
+
+        return {
+          requestCount: 1,
+          shouldShowForm: false,
+        };
+      } catch (error) {
+        console.error("[trackRequest] Error:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error instanceof Error ? error.message : "Failed to track request",
+        });
+      }
+    }),
+
+  submitUserProfile: baseProcedure
+    .input(
+      z.object({
+        sessionId: z.string(),
+        firstName: z.string().min(1),
+        lastName: z.string().min(1),
+        email: z.string().email(),
+        phone: z.string().min(1),
+        programmingLevel: z.enum([
+          "Iniciante",
+          "Atuo na área há menos de 2 anos",
+          "Atuo na área há mais de 2 anos",
+        ]),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        console.log("[submitUserProfile] Received data:", {
+          sessionId: input.sessionId,
+          email: input.email,
+          firstName: input.firstName,
+          lastName: input.lastName,
+          programmingLevel: input.programmingLevel,
+          phone: input.phone,
+        });
+
+        // Sync to HubSpot
+        console.log("[submitUserProfile] Syncing to HubSpot...");
+        const hubspotResult = await syncContactToHubSpot({
+          firstName: input.firstName,
+          lastName: input.lastName,
+          email: input.email,
+          phone: input.phone,
+          programmingLevel: input.programmingLevel,
+        });
+        console.log("[submitUserProfile] HubSpot sync successful:", hubspotResult);
+
+        // Update user profile with HubSpot contact ID
+        console.log("[submitUserProfile] Updating user profile in database...");
+        await ctx.db
+          .update(userProfiles)
+          .set({
+            firstName: input.firstName,
+            lastName: input.lastName,
+            email: input.email,
+            phone: input.phone,
+            programmingLevel: input.programmingLevel,
+            hubspotContactId: hubspotResult.contactId,
+            updatedAt: new Date(),
+          })
+          .where(eq(userProfiles.sessionId, input.sessionId));
+        console.log("[submitUserProfile] Profile updated successfully");
+
+        return {
+          success: true,
+          contactId: hubspotResult.contactId,
+        };
+      } catch (error) {
+        console.error("[submitUserProfile] Error:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error instanceof Error ? error.message : "Failed to submit user profile",
+        });
+      }
+    }),
+
+  decrementRequestCount: baseProcedure
+    .input(z.object({ sessionId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      console.log("[decrementRequestCount] Decrementing for sessionId:", input.sessionId);
+
+      const [existing] = await ctx.db
+        .select()
+        .from(userProfiles)
+        .where(eq(userProfiles.sessionId, input.sessionId))
+        .limit(1);
+
+      if (existing && existing.requestCount > 1) {
+        const newCount = existing.requestCount - 1;
+        console.log("[decrementRequestCount] Decrementing count from", existing.requestCount, "to", newCount);
+
+        await ctx.db
+          .update(userProfiles)
+          .set({ requestCount: newCount, updatedAt: new Date() })
+          .where(eq(userProfiles.sessionId, input.sessionId));
+
+        return {
+          requestCount: newCount,
+          success: true,
+        };
+      }
+
+      console.log("[decrementRequestCount] Cannot decrement below 1");
+      return {
+        requestCount: existing?.requestCount ?? 0,
+        success: false,
       };
     }),
 });
